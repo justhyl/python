@@ -1,0 +1,23 @@
+def prime_factors(number):
+    # walidacja typu
+    if not isinstance(number, int):
+        raise TypeError("number must be int")
+
+    # walidacja wartości
+    if number < 2:
+        raise ValueError("number must be >= 2")
+
+    factors = []
+    divisor = 2
+
+    # dzielimy tak długo, jak ma to sens (do pierwiastka)
+    while divisor * divisor <= number:
+        if number % divisor == 0:
+            factors.append(divisor)
+            number = number // divisor
+        else:
+            divisor += 1
+
+    # jeśli coś zostało, to jest to ostatni czynnik pierwszy
+    factors.append(number)
+    return factors
