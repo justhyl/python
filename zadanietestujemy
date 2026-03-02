@@ -1,0 +1,179 @@
+import os
+import time
+import uuid
+
+import pytest
+import requests
+
+
+# Ustaw w shellu np:
+# export API_BASE_URL="http://localhost:5000"
+BASE_URL = os.getenv("API_BASE_URL", "http://localhost:5000").rstrip("/")
+
+ARTICLES_URL = f"{BASE_URL}/articles"
+
+
+def unique_title(prefix="Article X"):
+    # proste, czytelne, unikalne
+    return f"{prefix} - {int(time.time())} - {uuid.uuid4().hex[:8]}"
+
+
+def get_articles():
+    resp = requests.get(ARTICLES_URL, timeout=10)
+    return resp
+
+
+def get_articles_json():
+    resp = get_articles()
+    resp.raise_for_status()
+    data = resp.json()
+    # Zakładamy, że API zwraca listę artykułów
+    if not isinstance(data, list):
+        raise AssertionError(f"Expected list, got: {type(data)} / {data}")
+    return data
+
+
+def extract_titles(articles):
+    # Zakładamy, że każdy artykuł ma pole "title"
+    return [a.get("title") for a in articles]
+
+
+def add_article(payload):
+    resp = requests.post(ARTICLES_URL, json=payload, timeout=10)
+    return resp
+
+
+def delete_article(article_id):
+    resp = requests.delete(f"{ARTICLES_URL}/{article_id}", timeout=10)
+    return resp
+
+
+def find_article_by_title(articles, title):
+    for a in articles:
+        if a.get("title") == title:
+            return a
+    return None
+
+
+@pytest.fixture
+def created_article_id():
+    """
+    Fixture pomocnicza: jeśli w teście stworzymy artykuł, to na końcu spróbujemy go sprzątnąć.
+    Używamy go ręcznie (yield id), bo w scenariuszu #2 chcemy kontrolować kolejność.
+    """
+    article_id = None
+    yield lambda: article_id
+    if article_id is not None:
+        delete_article(article_id)
+
+
+# 1) Pobranie listy artykułów dwukrotnie i sprawdzenie, że liczba artykułów się nie zmieniła
+def test_articles_list_count_is_stable_between_two_reads():
+    first = get_articles_json()
+    second = get_articles_json()
+
+    assert len(first) == len(second), (
+        f"Liczba artykułów zmieniła się między odczytami: {len(first)} -> {len(second)}"
+    )
+
+
+# 2) CRUD wokół artykułu X
+def test_add_and_remove_article_x_visible_in_list():
+    title_x = unique_title("Article X")
+    payload = {
+        "title": title_x,
+        "content": "To jest testowy artykuł do scenariusza 2."
+    }
+
+    # Pobierz listę i upewnij się, że nie ma X
+    articles_before = get_articles_json()
+    assert find_article_by_title(articles_before, title_x) is None
+
+    # Dodaj X
+    create_resp = add_article(payload)
+    assert create_resp.status_code in (200, 201), (
+        f"Nie udało się dodać artykułu. status={create_resp.status_code}, body={create_resp.text}"
+    )
+
+    created = create_resp.json()
+    # Zakładamy, że API zwraca id nowego artykułu jako "id"
+    article_id = created.get("id")
+    assert article_id is not None, f"Brak 'id' w odpowiedzi po utworzeniu: {created}"
+
+    # Pobierz listę i sprawdź, że X jest
+    articles_after_create = get_articles_json()
+    assert find_article_by_title(articles_after_create, title_x) is not None, (
+        "Po dodaniu artykułu X nie widać go na liście."
+    )
+
+    # Usuń X
+    del_resp = delete_article(article_id)
+    assert del_resp.status_code in (200, 204), (
+        f"Nie udało się usunąć artykułu. status={del_resp.status_code}, body={del_resp.text}"
+    )
+
+    # Pobierz listę i sprawdź, że X zniknął
+    articles_after_delete = get_articles_json()
+    assert find_article_by_title(articles_after_delete, title_x) is None, (
+        "Po usunięciu artykułu X nadal widać go na liście."
+    )
+
+
+# 3) Próba usunięcia nieistniejącego artykułu -> 404
+def test_delete_non_existing_article_returns_404():
+    non_existing_id = "this-id-should-not-exist-12345"
+    resp = delete_article(non_existing_id)
+
+    assert resp.status_code == 404, (
+        f"Oczekiwano 404, a jest {resp.status_code}. body={resp.text}"
+    )
+
+
+# 4) Próba dodania artykułu bez tytułu -> 400 + informacja
+def test_add_article_without_title_returns_400_with_message():
+    payload = {
+        # "title" celowo pomijamy
+        "content": "Brak tytułu - test błędu 400."
+    }
+    resp = add_article(payload)
+
+    assert resp.status_code == 400, (
+        f"Oczekiwano 400, a jest {resp.status_code}. body={resp.text}"
+    )
+
+    # Sprawdzamy, czy jest jakaś informacja o błędzie.
+    # Nie zakładam konkretnego pola, bo różne API robią to inaczej.
+    try:
+        data = resp.json()
+    except ValueError:
+        pytest.fail(f"API zwróciło 400, ale odpowiedź nie jest JSON. body={resp.text}")
+
+    combined = str(data).lower()
+    assert ("title" in combined) or ("tytu" in combined) or ("required" in combined), (
+        f"Brakuje sensownej informacji o błędzie tytułu. body_json={data}"
+    )
+
+
+# --- Dodatkowe scenariusze (propozycje) ---
+
+@pytest.mark.xfail(reason="TDD: wymaganie - tytuł artykułu musi być unikalny (np. 409 Conflict).")
+def test_adding_duplicate_title_should_return_conflict():
+    """
+    To jest celowo test TDD, który może nie przechodzić, jeśli system nie ma jeszcze tego wymagania.
+    Pomysł: system nie pozwala tworzyć dwóch artykułów z takim samym title.
+    """
+    title = unique_title("UniqueTitle")
+    payload = {"title": title, "content": "Pierwszy."}
+
+    r1 = add_article(payload)
+    assert r1.status_code in (200, 201)
+    article_id = r1.json().get("id")
+    assert article_id is not None
+
+    try:
+        r2 = add_article(payload)
+        # wymaganie: drugi raz ma być konflikt
+        assert r2.status_code == 409
+    finally:
+        # sprzątanie pierwszego
+        delete_article(article_id)
