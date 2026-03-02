@@ -1,0 +1,210 @@
+SCENARIUSZ 1
+
+ID: SC-01
+Nazwa: Rejestracja nowego użytkownika
+Opis: Scenariusz sprawdza możliwość utworzenia nowego konta w systemie komunikatora oraz obsługę błędnych danych wejściowych.
+Typ: Funkcjonalny
+Prerekwizyty: Użytkownik nie jest zalogowany. System działa poprawnie.
+
+
+Przypadek testowy
+TC-01.1
+
+Nazwa: Rejestracja z poprawnymi danymi
+Opis: Sprawdzenie czy użytkownik może utworzyć konto przy podaniu poprawnych danych.
+Prerekwizyty: Użytkownik nie posiada konta w systemie.
+
+Kroki:
+
+Wejść na stronę rejestracji.
+
+Wprowadzić poprawny email.
+
+Wprowadzić poprawne hasło.
+
+Wprowadzić unikalny nick.
+
+Kliknąć "Zarejestruj".
+
+Oczekiwany rezultat:
+Konto zostaje utworzone, wyświetla się komunikat o sukcesie lub użytkownik zostaje przekierowany dalej.
+
+TC-01.2
+
+Nazwa: Rejestracja z istniejącym emailem
+Opis: Sprawdzenie czy system blokuje rejestrację z już użytym emailem.
+Prerekwizyty: Konto z podanym emailem istnieje.
+
+Kroki:
+
+Wejść na stronę rejestracji.
+
+Wprowadzić email, który już istnieje w systemie.
+
+Wprowadzić hasło i nick.
+
+Kliknąć "Zarejestruj".
+
+Oczekiwany rezultat:
+Wyświetla się komunikat o istniejącym koncie. Konto nie zostaje utworzone.
+
+TC-01.3
+
+Nazwa: Rejestracja z niepoprawnym formatem email
+Opis: Sprawdzenie walidacji formatu email.
+Prerekwizyty: Brak.
+
+Kroki:
+
+Wprowadzić email w formacie niezgodnym z wymaganiami.
+
+Wypełnić pozostałe pola poprawnie.
+
+Kliknąć "Zarejestruj".
+
+Oczekiwany rezultat:
+System wyświetla komunikat o błędnym formacie email.
+
+SCENARIUSZ 2
+
+ID: SC-02
+Nazwa: Logowanie użytkownika
+Opis: Scenariusz sprawdza poprawność procesu logowania oraz obsługę nieprawidłowych danych.
+Typ: Funkcjonalny
+Prerekwizyty: Konto użytkownika istnieje w systemie.
+
+TC-02.1
+
+Nazwa: Logowanie poprawnymi danymi
+Opis: Sprawdzenie czy użytkownik może się zalogować przy poprawnych danych.
+Prerekwizyty: Użytkownik posiada aktywne konto.
+
+Kroki:
+
+Wejść na stronę logowania.
+
+Wprowadzić poprawny email.
+
+Wprowadzić poprawne hasło.
+
+Kliknąć "Zaloguj".
+
+Oczekiwany rezultat:
+Użytkownik zostaje zalogowany i przekierowany do panelu głównego.
+
+TC-02.2
+
+Nazwa: Logowanie z błędnym hasłem
+Opis: Sprawdzenie reakcji systemu na niepoprawne dane logowania.
+Prerekwizyty: Konto istnieje.
+
+Kroki:
+
+Wprowadzić poprawny email.
+
+Wprowadzić niepoprawne hasło.
+
+Kliknąć "Zaloguj".
+
+Oczekiwany rezultat:
+Wyświetla się komunikat o błędnych danych. Logowanie nie następuje.
+
+SCENARIUSZ 3
+
+ID: SC-03
+Nazwa: Dodawanie użytkownika do znajomych
+Opis: Sprawdzenie możliwości wysyłania zaproszeń do znajomych oraz obsługi błędnych sytuacji.
+Typ: Integracyjny
+Prerekwizyty: Dwóch użytkowników posiada konta i jest zalogowanych.
+
+TC-03.1
+
+Nazwa: Wysłanie zaproszenia do znajomych
+Opis: Sprawdzenie czy użytkownik może wysłać zaproszenie do innego użytkownika.
+
+Kroki:
+
+Zalogować się jako użytkownik A.
+
+Wyszukać użytkownika B.
+
+Kliknąć "Dodaj do znajomych".
+
+Oczekiwany rezultat:
+Zaproszenie zostaje wysłane. Status zmienia się na „oczekujące”.
+
+TC-03.2
+
+Nazwa: Dodanie samego siebie do znajomych
+Opis: Sprawdzenie czy system blokuje możliwość dodania własnego konta.
+
+Kroki:
+
+Zalogować się.
+
+Wyszukać własny nick.
+
+Kliknąć "Dodaj do znajomych".
+
+Oczekiwany rezultat:
+System wyświetla komunikat o błędzie. Zaproszenie nie zostaje wysłane.
+
+SCENARIUSZ 4
+
+ID: SC-04
+Nazwa: Wysyłanie wiadomości
+Opis: Sprawdzenie możliwości wysyłania i odbierania wiadomości między znajomymi.
+Typ: Integracyjny
+Prerekwizyty: Użytkownicy są zalogowani i znajdują się na liście znajomych.
+
+TC-04.1
+
+Nazwa: Wysłanie wiadomości tekstowej
+Opis: Sprawdzenie czy wiadomość zostaje poprawnie wysłana i wyświetlona u odbiorcy.
+
+Kroki:
+
+Użytkownik A otwiera czat z użytkownikiem B.
+
+Wpisuje wiadomość.
+
+Kliknąć "Wyślij".
+
+Oczekiwany rezultat:
+Wiadomość pojawia się w oknie czatu u A i u B.
+
+TC-04.2
+
+Nazwa: Wysłanie pustej wiadomości
+Opis: Sprawdzenie walidacji pustej treści wiadomości.
+
+Kroki:
+
+Otworzyć czat.
+
+Nie wpisywać treści.
+
+Kliknąć "Wyślij".
+
+Oczekiwany rezultat:
+System blokuje wysłanie wiadomości lub wyświetla komunikat.
+
+TC-04.3
+
+Nazwa: Utrata połączenia podczas wysyłania
+Opis: Sprawdzenie zachowania systemu przy braku internetu.
+
+Prerekwizyty: Symulowany brak połączenia sieciowego.
+
+Kroki:
+
+Otworzyć czat.
+
+Wpisać wiadomość.
+
+Odłączyć internet.
+
+Kliknąć "Wyślij".
+
+Oczekiwany rezultat:
+System informuje o błędzie wysyłki. Wiadomość nie znika bez informacji.
