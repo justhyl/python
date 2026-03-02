@@ -1,0 +1,16 @@
+import time
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+
+def test_store_search(selenium):
+    selenium.get("https://www.ebay.com/")
+    search = WebDriverWait(selenium, 60).until(
+        lambda s: s.find_element(By.NAME, "search")
+    )
+    search.send_keys("Laptop")
+    time.sleep(3)
+    selenium.quit()
+
+    category = selenium.find_element(By.PARTIAL_LINK_TEXT, "Laptops & Netbooks")
+
+    assert category.is_displayed()
