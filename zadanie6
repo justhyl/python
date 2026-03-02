@@ -1,0 +1,53 @@
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+
+def _get_visible_results_count(driver):
+    # W Kodilla Store produkty są zwykle renderowane jako elementy z klasą "element".
+    # XPath-Relative: używamy // i contains(), bez absolutnych ścieżek.
+    elements = driver.find_elements(By.XPATH, "//div[contains(@class,'element')]")
+    visible = [el for el in elements if el.is_displayed()]
+    return len(visible)
+
+
+def assert_amount(driver, phrase, expected_amount):
+    expected_amount = int(expected_amount)
+
+    # Znajdź pole wyszukiwania "Szukaj..."
+    search_input = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located(
+            (By.XPATH, "//input[contains(@placeholder,'Szukaj')]")
+        )
+    )
+
+    # Wpisz frazę
+    search_input.clear()
+    search_input.send_keys(phrase)
+
+    # Poczekaj aż liczba wyników będzie taka jak oczekiwana (albo timeout)
+    WebDriverWait(driver, 10).until(
+        lambda d: _get_visible_results_count(d) == expected_amount
+    )
+
+    actual_amount = _get_visible_results_count(driver)
+    assert actual_amount == expected_amount, (
+        f"Dla frazy '{phrase}' oczekiwano {expected_amount}, "
+        f"ale znaleziono {actual_amount}."
+    )
+
+
+def test_store(selenium):
+    driver = selenium
+    driver.get("https://kodilla.com/pl/test/store")
+
+    # --- Przykłady z polecenia ---
+    assert_amount(driver, "Laptop", "3")
+    assert_amount(driver, "NoteBook", "2")
+    assert_amount(driver, "Gaming", "1")
+
+    # --- Dodatkowe (bezpieczne) przypadki: powinno być 0 wyników ---
+    # Używam mało prawdopodobnych fraz, żeby test był stabilny.
+    assert_amount(driver, "qwertyuiop___no_such_product", "0")
+    assert_amount(driver, "###@@@___", "0")
+    assert_amount(driver, "nie_istnieje_12345", "0")
