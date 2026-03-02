@@ -1,0 +1,111 @@
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MAIN_FILE = PROJECT_ROOT / "main.py"
+
+
+def run_app(*args: str) -> subprocess.CompletedProcess:
+    # uruchamiamy jak user: python main.py <args...>
+    cmd = [sys.executable, str(MAIN_FILE), *args]
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+# --- BLACK-BOX: wymagania funkcjonalne (happy path) ---
+
+
+@pytest.mark.parametrize(
+    "left,op,right,expected",
+    [
+        ("1", "+", "3", "4"),
+        ("1", "-", "3", "-2"),
+        ("2", "x", "3", "6"),
+    ],
+)
+def test_cli_operations_ok(left, op, right, expected):
+    result = run_app(left, op, right)
+
+    assert result.returncode == 0
+    assert result.stderr.strip() == ""
+    assert result.stdout.strip() == expected
+
+
+@pytest.mark.xfail(reason="BUG: README expects integer output '2', but app prints '2.0' for division")
+def test_cli_division_should_print_integer_as_in_readme():
+    # README pokazuje 6 / 3 -> 2 (bez .0) :contentReference[oaicite:3]{index=3}
+    result = run_app("6", "/", "3")
+
+    assert result.returncode == 0
+    assert result.stderr.strip() == ""
+    assert result.stdout.strip() == "2"
+
+
+# --- BLACK-BOX: przypadki skrajne i błędy wejścia ---
+
+
+def test_cli_with_zero_arguments_returns_error():
+    # aktualnie main(*args) wywali się TypeError przy braku argumentów
+    result = run_app()
+
+    assert result.returncode != 0
+    # w tej wersji to raczej traceback, ale przynajmniej wykrywamy błąd wejścia
+    assert result.stdout.strip() == ""
+
+
+def test_cli_with_too_few_arguments_returns_error():
+    result = run_app("1", "+")  # brakuje right
+    assert result.returncode != 0
+    assert result.stdout.strip() == ""
+
+
+def test_cli_with_too_many_arguments_returns_error():
+    result = run_app("1", "+", "2", "3")  # za dużo argumentów
+    assert result.returncode != 0
+    assert result.stdout.strip() == ""
+
+
+def test_cli_with_non_numeric_argument_returns_error():
+    result = run_app("aaa", "+", "2")
+    assert result.returncode != 0
+    assert result.stdout.strip() == ""
+
+
+def test_cli_with_float_string_argument_returns_error():
+    result = run_app("1.5", "+", "2")
+    assert result.returncode != 0
+    assert result.stdout.strip() == ""
+
+
+def test_cli_with_unknown_operator_returns_error():
+    result = run_app("1", "%", "2")
+    assert result.returncode != 0
+    assert result.stdout.strip() == ""
+
+
+# --- BLACK-BOX: błędy działania ---
+
+
+def test_cli_division_by_zero_returns_error():
+    result = run_app("1", "/", "0")
+    assert result.returncode != 0
+    assert result.stdout.strip() == ""
+
+
+# --- BLACK-BOX: wymaganie "informować o błędach" (na razie jako xfail) ---
+
+
+@pytest.mark.xfail(reason="TODO/BUG: app should show friendly input error message, not traceback")
+def test_cli_should_print_friendly_message_on_bad_input():
+    result = run_app("aaa", "+", "2")
+    assert result.returncode != 0
+    assert "Błąd" in (result.stdout + result.stderr)
+
+
+@pytest.mark.xfail(reason="TODO/BUG: app should show friendly operation error message, not traceback")
+def test_cli_should_print_friendly_message_on_division_by_zero():
+    result = run_app("1", "/", "0")
+    assert result.returncode != 0
+    assert "Dzielenie przez zero" in (result.stdout + result.stderr)
