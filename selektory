@@ -1,0 +1,39 @@
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+
+
+def assert_amount(driver, phrase, expected_amount):
+    expected_amount = int(expected_amount)
+
+    # pole wyszukiwania po ID
+    search_input = driver.find_element(By.ID, "searchField")
+
+    search_input.clear()
+    search_input.send_keys(phrase)
+
+    # czekamy aż liczba produktów będzie zgodna
+    WebDriverWait(driver, 10).until(
+        lambda d: len(d.find_elements(By.CLASS_NAME, "element")) == expected_amount
+    )
+
+    products = driver.find_elements(By.CLASS_NAME, "element")
+
+    # wypisujemy informacje o produktach
+    for product in products:
+        print(product.text)
+
+    assert len(products) == expected_amount
+
+
+def test_store(selenium):
+    driver = selenium
+    driver.get("https://kodilla.com/pl/test/store")
+
+    assert_amount(driver, "Laptop", "3")
+    assert_amount(driver, "NoteBook", "2")
+    assert_amount(driver, "Gaming", "1")
+    assert_amount(driver, "School", "1")
+    assert_amount(driver, "Brand", "1")
+    assert_amount(driver, "Business", "1")
+    assert_amount(driver, "Powerful", "1")
+    assert_amount(driver, "nie_istnieje", "0")
