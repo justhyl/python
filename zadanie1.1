@@ -1,0 +1,110 @@
+from datetime import datetime
+import pytest
+
+
+def is_palindrome(data):
+    # 1) None -> TypeError
+    if data is None:
+        raise TypeError("Argument nie może być None")
+
+    # 2) Bool -> TypeError (pułapka: bool dziedziczy po int)
+    if isinstance(data, bool):
+        raise TypeError("Wartości logiczne nie są obsługiwane")
+
+    # 3) int / float
+    # Uwaga: sprawdzamy bool wcześniej, więc tu już nie wpadnie
+    if isinstance(data, (int, float)):
+        if data < 0:
+            return False
+        data = str(data)
+
+    # 4) str
+    if isinstance(data, str):
+        cleaned = "".join(ch.lower() for ch in data if ch.isalnum())
+        return cleaned == cleaned[::-1]
+
+    # 5) list / tuple
+    if isinstance(data, (list, tuple)):
+        return data == data[::-1]
+
+    # 6) inne typy
+    raise TypeError(f"Nieobsługiwany typ danych: {type(data).__name__}")
+
+
+# -----------------------
+# TESTY (pytest)
+# -----------------------
+
+# --- STRINGI ---
+def test_simple_word_true():
+    assert is_palindrome("kajak") is True
+
+def test_simple_word_false():
+    assert is_palindrome("python") is False
+
+def test_sentence_with_punctuation_true():
+    assert is_palindrome("Kobyła ma mały bok.") is True
+
+def test_empty_string_true():
+    assert is_palindrome("") is True
+
+def test_only_special_chars_true():
+    # po czyszczeniu zostaje pusty string -> palindrom
+    assert is_palindrome("!!!") is True
+
+
+# --- LICZBY ---
+def test_integer_true():
+    assert is_palindrome(121) is True
+
+def test_integer_false():
+    assert is_palindrome(123) is False
+
+def test_negative_integer_false():
+    assert is_palindrome(-121) is False
+
+def test_float_true():
+    assert is_palindrome(1.1) is True   # "1.1"
+
+def test_float_false():
+    assert is_palindrome(12.3) is False # "12.3"
+
+def test_negative_float_false():
+    assert is_palindrome(-1.1) is False
+
+
+# --- LISTY / TUPLE: obie gałęzie ---
+def test_list_true():
+    assert is_palindrome([1, 2, 3, 2, 1]) is True
+
+def test_list_false():
+    assert is_palindrome([1, 2, 3]) is False
+
+def test_tuple_true():
+    assert is_palindrome((1, 2, 1)) is True
+
+def test_tuple_false():
+    assert is_palindrome((1, 2, 3)) is False
+
+
+# --- WYJĄTKI: None i nieobsługiwane typy ---
+def test_none_raises_typeerror():
+    with pytest.raises(TypeError):
+        is_palindrome(None)
+
+def test_bool_true_raises_typeerror():
+    with pytest.raises(TypeError):
+        is_palindrome(True)
+
+def test_bool_false_raises_typeerror():
+    with pytest.raises(TypeError):
+        is_palindrome(False)
+
+@pytest.mark.parametrize("value", [
+    {"a": 1},          # dict
+    {1, 2, 3},         # set
+    datetime(2026, 3, 4),
+])
+def test_unsupported_types_raise_typeerror(value):
+    with pytest.raises(TypeError):
+        is_palindrome(value)
